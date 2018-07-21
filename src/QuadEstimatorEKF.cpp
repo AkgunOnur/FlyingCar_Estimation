@@ -96,6 +96,7 @@ void QuadEstimatorEKF::UpdateFromIMU(V3F accel, V3F gyro)
   //float predictedPitch = pitchEst + dtIMU * gyro.y;
   //float predictedRoll = rollEst + dtIMU * gyro.x;
   //ekfState(6) = ekfState(6) + dtIMU * gyro.z;	// yaw
+
 	Mat3x3F rot_matrix = Mat3x3F::Zeros();
 	rot_matrix(0, 0) = 1;
 	rot_matrix(0, 1) = sin(rollEst)*tan(pitchEst);
@@ -185,7 +186,6 @@ VectorXf QuadEstimatorEKF::PredictState(VectorXf curState, float dt, V3F accel, 
   predictedState(4) = curState(4) + accel_inertial.y * dt;
   predictedState(5) = curState(5) + accel_inertial.x * dt - CONST_GRAVITY * dt;
 
-
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
   return predictedState;
@@ -217,7 +217,6 @@ MatrixXf QuadEstimatorEKF::GetRbgPrime(float roll, float pitch, float yaw)
   RbgPrime(1, 0) = cos(pitch)*cos(yaw);
   RbgPrime(1, 1) = sin(roll)*sin(pitch)*cos(yaw) - cos(roll)*sin(yaw);
   RbgPrime(1, 2) = cos(roll)*sin(pitch)*cos(yaw) + sin(roll)*sin(yaw);
-
 
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
@@ -331,6 +330,7 @@ void QuadEstimatorEKF::UpdateFromMag(float magYaw)
 	  zFromX(0) += 2.0 * F_PI;
   
   hPrime(0, 6) = 1;
+
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
   Update(z, hPrime, R_Mag, zFromX);
