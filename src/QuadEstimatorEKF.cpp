@@ -97,20 +97,30 @@ void QuadEstimatorEKF::UpdateFromIMU(V3F accel, V3F gyro)
   //float predictedRoll = rollEst + dtIMU * gyro.x;
   //ekfState(6) = ekfState(6) + dtIMU * gyro.z;	// yaw
 
-	Mat3x3F rot_matrix = Mat3x3F::Zeros();
-	rot_matrix(0, 0) = 1;
-	rot_matrix(0, 1) = sin(rollEst)*tan(pitchEst);
-	rot_matrix(0, 2) = cos(rollEst)*tan(pitchEst);
-	rot_matrix(1, 1) = cos(rollEst);
-	rot_matrix(1, 2) = -sin(rollEst);
-	rot_matrix(2, 1) = sin(rollEst)/cos(pitchEst);
-	rot_matrix(2, 2) = cos(rollEst)/cos(pitchEst);
+	//Mat3x3F rot_matrix = Mat3x3F::Zeros();
+	//rot_matrix(0, 0) = 1;
+	//rot_matrix(0, 1) = sin(rollEst)*tan(pitchEst);
+	//rot_matrix(0, 2) = cos(rollEst)*tan(pitchEst);
+	//rot_matrix(1, 1) = cos(rollEst);
+	//rot_matrix(1, 2) = -sin(rollEst);
+	//rot_matrix(2, 1) = sin(rollEst)/cos(pitchEst);
+	//rot_matrix(2, 2) = cos(rollEst)/cos(pitchEst);
 
-	V3F angle_dot = rot_matrix * gyro;
+	//V3F angle_dot = rot_matrix * gyro;
 
-	float predictedRoll = rollEst + dtIMU * angle_dot.x;
-	float predictedPitch = pitchEst + dtIMU * angle_dot.y;
-	ekfState(6) = ekfState(6) + dtIMU * angle_dot.z;
+	//float predictedRoll = rollEst + dtIMU * angle_dot.x;
+	//float predictedPitch = pitchEst + dtIMU * angle_dot.y;
+	//ekfState(6) = ekfState(6) + dtIMU * angle_dot.z;
+
+	Quaternion<float> attitudeEst;
+	attitudeEst = attitudeEst.FromEuler123_RPY(rollEst, pitchEst, ekfState(6));
+	attitudeEst.IntegrateBodyRate(gyro, dtIMU);
+	V3D IMU = attitudeEst.ToEulerRPY();
+
+	// predict pitch and roll from IMU data
+	float predictedPitch = IMU.y;
+	float predictedRoll = IMU.x;
+	ekfState(6) = IMU.z;
 
   // normalize yaw to -pi .. pi
   if (ekfState(6) > F_PI) ekfState(6) -= 2.f*F_PI;
@@ -176,15 +186,15 @@ VectorXf QuadEstimatorEKF::PredictState(VectorXf curState, float dt, V3F accel, 
   Quaternion<float> attitude = Quaternion<float>::FromEuler123_RPY(rollEst, pitchEst, curState(6));
 
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
-  predictedState(0) = curState(0) + predictedState(3) * dt;
-  predictedState(1) = curState(1) + predictedState(4) * dt;
-  predictedState(2) = curState(2) + predictedState(5) * dt;
+  predictedState(0) = curState(0) + dt * curState(3);
+  predictedState(1) = curState(1) + dt * curState(4);
+  predictedState(2) = curState(2) + dt * curState(5);
 
-  V3F accel_inertial = attitude.Rotate_BtoI(accel);
-
-  predictedState(3) = curState(3) + accel_inertial.x * dt;
-  predictedState(4) = curState(4) + accel_inertial.y * dt;
-  predictedState(5) = curState(5) + accel_inertial.x * dt - CONST_GRAVITY * dt;
+  V3F acc = attitude.Rotate_BtoI(accel);
+  // predict states by incorporating the acc from omega
+  predictedState(3) = curState(3) + dt * acc.x;
+  predictedState(4) = curState(4) + dt * acc.y;
+  predictedState(5) = curState(5) + dt * acc.z - dt * CONST_GRAVITY;
 
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
